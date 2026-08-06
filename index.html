@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { margin: 0; padding: 10px; background: transparent; }
+
+        .card-solicitar {
+            width: 100%;
+            max-width: 380px;
+            border-radius: 20px;
+            padding: 14px 16px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .card-solicitar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        .badge-icone {
+            background-color: #ffffff;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .badge-icone svg { width: 24px; height: 24px; }
+        .titulo-acao { font-size: 17px; font-weight: 500; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <button id="btnGPS" class="card-solicitar">
+        <div class="badge-icone">
+            <svg id="iconeRelatorio" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+        </div>
+        <span class="titulo-acao">INICIAR MONITOR GPS</span>
+    </button>
+
+    <script>
+        const DADOS_NAO_BATER = [
+            "Rua das Palmeiras",
+            "Avenida Brasil",
+            "Rua Sete de Setembro",
+            "Travessa Jundiaí"
+        ];
+
+        const URL_DESTINO = "https://congregacaovideiras-hub.github.io/naobater/";
+        const COR_DE_FUNDO = "#1e3a8a";
+
+        const btn = document.getElementById('btnGPS');
+        const icone = document.getElementById('iconeRelatorio');
+
+        btn.style.backgroundColor = COR_DE_FUNDO;
+        icone.style.fill = COR_DE_FUNDO;
+
+        btn.addEventListener('click', function() {
+            const dadosFormatados = DADOS_NAO_BATER.map(nome => ({
+                textoCompleto: nome.toUpperCase(),
+                textoExibicao: nome
+            }));
+
+            localStorage.setItem('naoBater_cache', JSON.stringify(dadosFormatados));
+            
+            window.open(URL_DESTINO, '_blank');
+        });
+    </script>
+</body>
+</html>
