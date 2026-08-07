@@ -253,21 +253,27 @@
             
             if (dadosCache) {
                 const dadosBrutos = JSON.parse(dadosCache);
-                baseDadosLocal = dadosBrutos.map(item => {
-                    const original = typeof item === 'string' ? item : (item.ENDERECO || item.textoCompleto || item.textoExibicao || "");
+                
+                let listaReal = dadosBrutos;
+                if (!Array.isArray(dadosBrutos)) {
+                    listaReal = dadosBrutos.dados || dadosBrutos.itens || dadosBrutos.array || Object.values(dadosBrutos).find(Array.isArray) || [];
+                }
+
+                baseDadosLocal = listaReal.map(item => {
+                    const original = typeof item === 'string' ? item : (item.ENDERECO || item.textoCompleto || item.textoExibicao || item.rua || item.nome || "");
                     return {
                         textoCompleto: original,
                         textoExibicao: original,
                         textoNormalizado: normalizarTexto(original)
                     };
-                });
+                }).filter(i => i.textoCompleto !== "");
 
                 let amostra = baseDadosLocal.slice(0, 2).map(i => `"${i.textoNormalizado}"`).join(" | ");
 
                 if (statusElem) {
                     statusElem.innerHTML = `
-                        Cache carregado! (<b>${baseDadosLocal.length}</b> itens).<br>
-                        <span style="font-size:11px; color:#16a34a;">Exemplo no cache: ${amostra}</span>
+                        Cache carregado! (<b>${baseDadosLocal.length}</b> itens reais).<br>
+                        <span style="font-size:11px; color:#16a34a;">Exemplo: ${amostra}</span>
                     `;
                 }
             } else {
