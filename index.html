@@ -494,7 +494,7 @@
                 const lon = pos.coords.longitude;
 
                 const distanciaPercorrida = calcularDistanciaMetros(lat, lon, ultimaLat, ultimaLon);
-                if (distanciaPercorrida < 3 && ultimaLat !== 0) {
+                if (distanciaPercorrida < 30 && ultimaLat !== 0) {
                     return;
                 }
 
