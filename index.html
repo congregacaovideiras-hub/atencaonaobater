@@ -116,7 +116,6 @@
             color: var(--text-main);
         }
 
-        /* Cards de Alerta */
         .card-alert {
             background-color: var(--danger-bg);
             border: 1px solid #fca5a5;
@@ -187,7 +186,7 @@
             margin-top: 12px;
             text-align: left;
             word-break: break-all;
-            max-height: 150px;
+            max-height: 180px;
             overflow-y: auto;
         }
 
@@ -208,20 +207,17 @@
         <p>Monitoramento contínuo de ruas com restrição.</p>
     </div>
 
-    <!-- Botão de Ação GPS -->
     <div class="button-group">
         <button id="btnGPS" class="btn btn-gps" onclick="alternarMonitoramentoGPS()">
             <span class="material-icons-round">my_location</span> Iniciar GPS
         </button>
     </div>
 
-    <!-- Indicador de Localização Atual -->
     <div id="infoGPS" class="location-badge" style="display: none;">
         <span class="material-icons-round" style="font-size: 18px; color: var(--primary);">near_me</span>
         <div>GPS Atual: <strong id="ruaGPS">Aguardando coordenadas...</strong></div>
     </div>
 
-    <!-- Container de Status/Resultados -->
     <div id="resultados">
         <div class="status-box" id="statusInicial">
             Carregando banco de dados local...
@@ -237,13 +233,13 @@
     let timerRepeticaoAlerta = null;
     let emRuaProibidaAtualmente = false;
 
-    // Normalização aprimorada: remove prefixos mas preserva o nome essencial (como ANGELO LOTIERZO)
+    // Normalização rigorosa: Remove acentos, prefixos de logradouro e pontuações
     function normalizarTexto(texto) {
         if (!texto) return "";
         return texto
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
-            .replace(/^(RUA|AVENIDA|AV|ALAMEDA|TRAVESSA|ESTRADA|PCA|PRAÇA|RODOVIA|ROD)\.?\s*/i, "")
+            .replace(/^(RUA|AVENIDA|AV|ALAMEDA|TRAVESSA|ESTRADA|PCA|PRACA|RODOVIA|ROD)\.?\s*/i, "")
             .replace(/[^a-zA-Z0-9\s]/g, "")
             .replace(/\s+/g, " ")
             .trim()
@@ -258,7 +254,6 @@
             if (dadosCache) {
                 const dadosBrutos = JSON.parse(dadosCache);
                 baseDadosLocal = dadosBrutos.map(item => {
-                    // Compatibilidade com a estrutura ENDERECO ou textoCompleto
                     const original = item.ENDERECO || item.textoCompleto || item.textoExibicao || "";
                     return {
                         textoCompleto: original,
@@ -267,17 +262,17 @@
                     };
                 });
 
-                let amostra = baseDadosLocal.slice(0, 3).map(i => i.textoNormalizado).join(" | ");
+                let amostra = baseDadosLocal.slice(0, 2).map(i => `"${i.textoNormalizado}"`).join(" | ");
 
                 if (statusElem) {
                     statusElem.innerHTML = `
-                        Cache carregado com sucesso! (<b>${baseDadosLocal.length}</b> registros).<br>
-                        <span style="font-size:11px; color:#16a34a;">Exemplos salvos: ${amostra}...</span>
+                        Cache carregado! (<b>${baseDadosLocal.length}</b> itens).<br>
+                        <span style="font-size:11px; color:#16a34a;">Banco Normalizado: ${amostra}</span>
                     `;
                 }
             } else {
                 if (statusElem) {
-                    statusElem.innerHTML = `<span style="color:var(--danger);">ATENÇÃO: Nenhum cache encontrado no localStorage ("naoBater_cache"). Volte na tela de carregamento de dados primeiro!</span>`;
+                    statusElem.innerHTML = `<span style="color:var(--danger);">ATENÇÃO: Nenhum cache encontrado no localStorage ("naoBater_cache").</span>`;
                 }
             }
         } catch (error) {
@@ -395,7 +390,7 @@
 
                     document.getElementById('ruaGPS').innerText = nomeRua;
                     
-                    pesquisarNaMemoriaFlexivel(nomeRua);
+                    pesquisarNaMemoriaCompletamenteFlexivel(nomeRua);
 
                 } catch (err) {
                     console.error("Erro na Geocodificação:", err);
@@ -414,8 +409,7 @@
         );
     };
 
-    // MOTOR DE CORRESPONDÊNCIA FLEXÍVEL CORRIGIDO (CONECTA PALAVRAS PARCIAIS)
-    function pesquisarNaMemoriaFlexivel(nomeRuaGPS) {
+    function pesquisarNaMemoriaCompletamenteFlexivel(nomeRuaGPS) {
         const container = document.getElementById('resultados');
         const termoGPSLimpo = normalizarTexto(nomeRuaGPS);
 
@@ -424,17 +418,14 @@
             return;
         }
 
-        // Correção de lógica: Verifica se o miolo principal da rua (ex: ANGELO LOTIERZO) está contido no banco ou vice-versa
         let encontrados = baseDadosLocal.filter(item => {
             const itemLimpo = item.textoNormalizado;
             if (!itemLimpo) return false;
 
-            // Compara correspondência exata ou cruzada por partes (ex: se "ANGELO LOTIERZO" está dentro do banco)
-            return itemLimpo.includes(termoGPSLimpo) || termoGPSLimpo.includes(itemLimpo) ||
-                   verificarPalavrasParciais(termoGPSLimpo, itemLimpo);
+            return itemLimpo.includes(termoGPSLimpo) || termoGPSLimpo.includes(itemLimpo);
         });
 
-        let debugInfo = `Rua GPS tratada: "${termoGPSLimpo}"\nTotal no cache: ${baseDadosLocal.length}\nEncontrados: ${encontrados.length}`;
+        let debugInfo = `GPS Lido (Normalizado): "${termoGPSLimpo}"\nTotal no Cache: ${baseDadosLocal.length}\nResultados Encontrados: ${encontrados.length}`;
 
         if (encontrados.length > 0) {
             if (!emRuaProibidaAtualmente) {
@@ -446,10 +437,6 @@
             let itemsHtml = encontrados.map(item => `<div class="address-item">${item.textoExibicao}</div>`).join('');
 
             container.innerHTML = `
-                <div class="gps-alert-box">
-                    <span class="material-icons-round">warning</span>
-                    ATENÇÃO: Você está em uma rua com restrição registrada!
-                </div>
                 <div class="card-alert">
                     <div class="alert-header">
                         <span class="material-icons-round">error</span>
@@ -459,7 +446,7 @@
                         ${itemsHtml}
                     </div>
                 </div>
-                <div class="debug-box">DEBUG: ${debugInfo}</div>
+                <div class="debug-box">${debugInfo}</div>
             `;
         } else {
             pararRepeticaoAlerta();
@@ -470,23 +457,9 @@
                     <span class="material-icons-round" style="vertical-align: middle; margin-right: 4px;">check_circle</span>
                     Rua atual: <b>${nomeRuaGPS}</b>.<br>Nenhum registro encontrado no cache.
                 </div>
-                <div class="debug-box">DEBUG (O que o app leu vs Cache):\n- GPS Lido: "${termoGPSLimpo}"\n- Verifique se a grafia no seu banco bate com este termo.</div>
+                <div class="debug-box">${debugInfo}</div>
             `;
         }
-    }
-
-    // Função auxiliar para cruzar palavras-chave (Ex: "ANGELO" e "LOTIERZO")
-    function verificarPalavrasParciais(termo1, termo2) {
-        const palavras1 = termo1.split(' ').filter(p => p.length > 2);
-        const palavras2 = termo2.split(' ').filter(p => p.length > 2);
-        
-        let coincidente = 0;
-        for (let p of palavras1) {
-            if (palavras2.some(p2 => p2.includes(p) || p.includes(p2))) {
-                coincidente++;
-            }
-        }
-        return coincidente >= 2 || (palavras1.length === 1 && coincidente === 1);
     }
 
     function iniciarRepeticaoAlerta(nomeRua) {
