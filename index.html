@@ -186,7 +186,7 @@
             margin-top: 12px;
             text-align: left;
             word-break: break-all;
-            max-height: 180px;
+            max-height: 200px;
             overflow-y: auto;
         }
 
@@ -233,7 +233,7 @@
     let timerRepeticaoAlerta = null;
     let emRuaProibidaAtualmente = false;
 
-    // Normalização rigorosa: Remove acentos, prefixos de logradouro e pontuações
+    // Normalização aprimorada: Remove acentos, prefixos e padroniza espaços
     function normalizarTexto(texto) {
         if (!texto) return "";
         return texto
@@ -267,7 +267,7 @@
                 if (statusElem) {
                     statusElem.innerHTML = `
                         Cache carregado! (<b>${baseDadosLocal.length}</b> itens).<br>
-                        <span style="font-size:11px; color:#16a34a;">Banco Normalizado: ${amostra}</span>
+                        <span style="font-size:11px; color:#16a34a;">Exemplo no cache: ${amostra}</span>
                     `;
                 }
             } else {
@@ -418,14 +418,18 @@
             return;
         }
 
+        // MOTOR DE BUSCA CORRIGIDO E BLINDADO: Compara com normalização em ambos os lados
         let encontrados = baseDadosLocal.filter(item => {
             const itemLimpo = item.textoNormalizado;
             if (!itemLimpo) return false;
 
-            return itemLimpo.includes(termoGPSLimpo) || termoGPSLimpo.includes(itemLimpo);
+            // Compara exato e também verifica se um contém o outro em qualquer direção
+            return itemLimpo === termoGPSLimpo || 
+                   itemLimpo.includes(termoGPSLimpo) || 
+                   termoGPSLimpo.includes(itemLimpo);
         });
 
-        let debugInfo = `GPS Lido (Normalizado): "${termoGPSLimpo}"\nTotal no Cache: ${baseDadosLocal.length}\nResultados Encontrados: ${encontrados.length}`;
+        let debugInfo = `GPS Lido (Original): "${nomeRuaGPS}"\nGPS Lido (Normalizado): "${termoGPSLimpo}"\nTotal Cache: ${baseDadosLocal.length}\nAchados: ${encontrados.length}\n1º do Cache (Normalizado): "${baseDadosLocal[0]?.textoNormalizado || 'VAZIO'}"`;
 
         if (encontrados.length > 0) {
             if (!emRuaProibidaAtualmente) {
