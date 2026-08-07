@@ -237,6 +237,18 @@
     let ultimaLat = 0;
     let ultimaLon = 0;
 
+    // Função para remover acentos e padronizar textos
+    function normalizarTexto(texto) {
+        if (!texto) return "";
+        return texto
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/^(RUA|AVENIDA|AV|ALAMEDA|TRAVESSA|ESTRADA|PCA|PRAÇA)\.?\s*/i, "") // Remove prefixos para comparar o miolo da rua
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase();
+    }
+
     // CARREGA A COLEÇÃO DIRETAMENTE DO CACHE LOCAL (LOCALSTORAGE)
     function carregarBancoDeDados() {
         const statusElem = document.getElementById('statusInicial');
@@ -244,7 +256,16 @@
             const dadosCache = localStorage.getItem('naoBater_cache');
             
             if (dadosCache) {
-                baseDadosLocal = JSON.parse(dadosCache);
+                const dadosBrutos = JSON.parse(dadosCache);
+                baseDadosLocal = dadosBrutos.map(item => {
+                    const original = item.textoCompleto || "";
+                    return {
+                        textoCompleto: original,
+                        textoExibicao: item.textoExibicao || original,
+                        textoNormalizado: normalizarTexto(original)
+                    };
+                });
+
                 if (statusElem) {
                     statusElem.innerHTML = `Banco de dados local pronto (<b>${baseDadosLocal.length}</b> registros). Inicie o GPS para começar.`;
                 }
@@ -261,8 +282,37 @@
         }
     }
 
-    // Inicializa a carga dos dados assim que o script carrega
     carregarBancoDeDados();
+
+    // GERADOR DE BEEP USANDO WEB AUDIO API (Garante som contínuo por 5 segundos)
+    function tocarAlertaSonoro5Segundos() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const duracao = 5.0; // 5 segundos
+            const frequencia = 750; // Tom de alerta agudo
+
+            // Cria pulsos repetitivos por 5 segundos (um bipe a cada 0.5s)
+            const tempoInicio = audioCtx.currentTime;
+            for (let i = 0; i < duracao; i += 0.5) {
+                const oscilador = audioCtx.createOscillator();
+                const ganho = audioCtx.createGain();
+
+                oscilador.type = 'sine';
+                oscilador.frequency.setValueAtTime(frequencia, tempoInicio + i);
+
+                ganho.gain.setValueAtTime(0.2, tempoInicio + i);
+                ganho.gain.exponentialRampToValueAtTime(0.001, tempoInicio + i + 0.3);
+
+                oscilador.connect(ganho);
+                ganho.connect(audioCtx.destination);
+
+                oscilador.start(tempoInicio + i);
+                oscilador.stop(tempoInicio + i + 0.3);
+            }
+        } catch (e) {
+            console.error("Erro ao gerar áudio:", e);
+        }
+    }
 
     // 2. MONITORAMENTO CONTÍNUO COM WATCHPOSITION
     window.alternarMonitoramentoGPS = function() {
@@ -271,7 +321,6 @@
         const ruaGPSElem = document.getElementById('ruaGPS');
         const container = document.getElementById('resultados');
 
-        // Se já estiver rodando, para o monitoramento
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
@@ -288,7 +337,6 @@
             return;
         }
 
-        // Inicia o monitoramento contínuo
         btnGPS.classList.add('active');
         btnGPS.innerHTML = `<span class="material-icons-round">stop</span> Parar GPS`;
         infoGPS.style.display = 'flex';
@@ -299,7 +347,6 @@
                 const lat = pos.coords.latitude;
                 const lon = pos.coords.longitude;
 
-                // Evita chamadas repetidas de geocodificação se a pessoa estiver parada (deslocamento menor que ~15 metros)
                 if (calcularDistanciaMetros(lat, lon, ultimaLat, ultimaLon) < 15 && ultimaRuaDetectada !== "") {
                     return;
                 }
@@ -310,7 +357,6 @@
                 try {
                     ruaGPSElem.innerText = 'Identificando rua...';
 
-                    // Geocodificação Reversa para pegar o nome da rua
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`);
                     const data = await response.json();
 
@@ -321,12 +367,10 @@
                         return;
                     }
 
-                    // Só realiza nova consulta se mudou de rua
-                    if (nomeRua.toUpperCase() !== ultimaRuaDetectada.toUpperCase()) {
+                    if (normalizarTexto(nomeRua) !== normalizarTexto(ultimaRuaDetectada)) {
                         ultimaRuaDetectada = nomeRua;
                         ruaGPSElem.innerText = nomeRua;
 
-                        // Pesquisa no cache local
                         pesquisarNaMemoria(nomeRua, true);
                     }
 
@@ -347,32 +391,31 @@
         );
     };
 
-    // 3. CONSULTA RÁPIDA APENAS NO CACHE LOCAL (Em memória)
+    // 3. CONSULTA FOCADA APENAS NO NOME DA RUA (Ignorando números)
     function pesquisarNaMemoria(termoBusca, viaGPS = false) {
         const container = document.getElementById('resultados');
-        const termoLimpo = termoBusca.toUpperCase().trim();
+        const termoLimpo = normalizarTexto(termoBusca);
 
         if (baseDadosLocal.length === 0) {
             container.innerHTML = `<div class="status-box">Base de dados local vazia. Verifique o cache.</div>`;
             return;
         }
 
-        // Filtra instantaneamente a lista local
-        const encontrados = baseDadosLocal.filter(item => item.textoCompleto.includes(termoLimpo));
+        // Compara ignorando completamente se o usuário está em um número específico da rua
+        let encontrados = baseDadosLocal.filter(item => {
+            // Extrai apenas o nome principal do endereço cadastrado (removendo números e complementos se houver)
+            const ruaCadastradaLimpa = item.textoNormalizado.split(/,\s*(N[ºO°]|NUMERO|APTO|CASA)/i)[0].trim();
+            return ruaCadastradaLimpa.includes(termoLimpo) || termoLimpo.includes(ruaCadastradaLimpa);
+        });
 
         if (encontrados.length > 0) {
-            // Vibração
+            // Vibração prolongada de alerta (vários ciclos simulando 5 segundos de vibração)
             if (navigator.vibrate) {
-                navigator.vibrate([500, 200, 500]);
+                navigator.vibrate([1000, 200, 1000, 200, 1000, 200, 1000]);
             }
 
-            // Som de Alerta (Certifique-se de ter o arquivo beep.mp3 na mesma pasta)
-            try {
-                const audio = new Audio("beep.mp3");
-                audio.play().catch(e => console.log("Aviso: Áudio precisa de interação prévia do usuário no navegador.", e));
-            } catch (e) {
-                console.error("Erro ao tocar áudio:", e);
-            }
+            // Dispara o alerta sonoro de 5 segundos
+            tocarAlertaSonoro5Segundos();
 
             let avisoGPSHtml = viaGPS ? `
                 <div class="gps-alert-box">
@@ -399,13 +442,12 @@
             container.innerHTML = `
                 <div class="status-box" style="background-color: var(--success-bg); color: var(--success); border-color: #bbf7d0;">
                     <span class="material-icons-round" style="vertical-align: middle; margin-right: 4px;">check_circle</span>
-                    Nenhum registro de "Não Bater" para <b>${termoLimpo}</b>.
+                    Nenhum registro de "Não Bater" para <b>${termoBusca}</b>.
                 </div>
             `;
         }
     }
 
-    // Função utilitária para calcular a distância percorrida e não sobrecarregar com requisições HTTP desnecessárias
     function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
         if (!lat2 || !lon2) return 999;
         const R = 6371e3;
