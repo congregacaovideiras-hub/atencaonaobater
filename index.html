@@ -230,8 +230,7 @@
     let watchId = null;
     let ultimaLat = 0;
     let ultimaLon = 0;
-    let timerRepeticaoAlerta = null;
-    let emRuaProibidaAtualmente = false;
+    let ultimaRuaAnalisada = "";
 
     function normalizarTexto(texto) {
         if (!texto) return "";
@@ -321,7 +320,7 @@
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
-            pararRepeticaoAlerta();
+            ultimaRuaAnalisada = "";
             btnGPS.classList.remove('active');
             btnGPS.innerHTML = `<span class="material-icons-round">my_location</span> Iniciar GPS`;
             infoGPS.style.display = 'none';
@@ -410,10 +409,9 @@
         });
 
         if (encontrados.length > 0) {
-            if (!emRuaProibidaAtualmente) {
-                emRuaProibidaAtualmente = true;
+            if (ultimaRuaAnalisada !== nomeRuaGPS) {
+                ultimaRuaAnalisada = nomeRuaGPS;
                 dispararAlertasCompletos();
-                iniciarRepeticaoAlerta();
             }
 
             let itemsHtml = encontrados.map(item => `<div class="address-item">${item.textoExibicao}</div>`).join('');
@@ -430,8 +428,7 @@
                 </div>
             `;
         } else {
-            pararRepeticaoAlerta();
-            emRuaProibidaAtualmente = false;
+            ultimaRuaAnalisada = nomeRuaGPS;
 
             container.innerHTML = `
                 <div class="status-box" style="background-color: var(--success-bg); color: var(--success); border-color: #bbf7d0;">
@@ -439,24 +436,6 @@
                     Rua atual: <b>${nomeRuaGPS}</b>.<br>Nenhum registro encontrado.
                 </div>
             `;
-        }
-    }
-
-    function iniciarRepeticaoAlerta() {
-        pararRepeticaoAlerta();
-        timerRepeticaoAlerta = setInterval(() => {
-            if (emRuaProibidaAtualmente) {
-                dispararAlertasCompletos();
-            } else {
-                pararRepeticaoAlerta();
-            }
-        }, 7000);
-    }
-
-    function pararRepeticaoAlerta() {
-        if (timerRepeticaoAlerta) {
-            clearInterval(timerRepeticaoAlerta);
-            timerRepeticaoAlerta = null;
         }
     }
 
