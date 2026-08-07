@@ -175,20 +175,6 @@
             border: 1px solid var(--border);
         }
 
-        .debug-box {
-            background: #1e293b;
-            color: #38bdf8;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 11px;
-            margin-top: 12px;
-            text-align: left;
-            word-break: break-all;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
@@ -279,13 +265,8 @@
                 textoNormalizado: normalizarTexto(original)
             }));
 
-            let amostra = baseDadosLocal.slice(0, 2).map(i => `"${i.textoNormalizado}"`).join(" | ");
-
             if (statusElem) {
-                statusElem.innerHTML = `
-                    Banco carregado do Firebase! (<b>${baseDadosLocal.length}</b> itens).<br>
-                    <span style="font-size:11px; color:#16a34a;">Exemplo: ${amostra}</span>
-                `;
+                statusElem.innerHTML = `Banco carregado do Firebase! (<b>${baseDadosLocal.length}</b> itens).`;
             }
         } catch (error) {
             console.error("Erro ao carregar do Firebase:", error);
@@ -297,12 +278,11 @@
 
     carregarBancoDoFirebase();
 
-    function dispararAlertasCompletos(nomeRuaDetectada) {
+    function dispararAlertasCompletos() {
         if (navigator.vibrate) {
-            navigator.vibrate([1000, 200, 1000, 200, 1000, 200, 1000]);
+            navigator.vibrate([1000, 200, 1000, 200, 1000, 200, 1000, 200, 1000]);
         }
         tocarAlertaSonoro5Segundos();
-        falarTextoVoz(`Atenção. Você entrou na rua ${nomeRuaDetectada}. Existe um registro de Não Bater.`);
     }
 
     function tocarAlertaSonoro5Segundos() {
@@ -330,16 +310,6 @@
             }
         } catch (e) {
             console.error("Erro ao gerar áudio:", e);
-        }
-    }
-
-    function falarTextoVoz(mensagem) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const fala = new SpeechSynthesisUtterance(mensagem);
-            fala.lang = 'pt-BR';
-            fala.rate = 1.0;
-            window.speechSynthesis.speak(fala);
         }
     }
 
@@ -439,13 +409,11 @@
                    termoGPSLimpo.includes(itemLimpo);
         });
 
-        let debugInfo = `GPS Lido (Original): "${nomeRuaGPS}"\nGPS Lido (Normalizado): "${termoGPSLimpo}"\nTotal Firebase: ${baseDadosLocal.length}\nAchados: ${encontrados.length}`;
-
         if (encontrados.length > 0) {
             if (!emRuaProibidaAtualmente) {
                 emRuaProibidaAtualmente = true;
-                dispararAlertasCompletos(nomeRuaGPS);
-                iniciarRepeticaoAlerta(nomeRuaGPS);
+                dispararAlertasCompletos();
+                iniciarRepeticaoAlerta();
             }
 
             let itemsHtml = encontrados.map(item => `<div class="address-item">${item.textoExibicao}</div>`).join('');
@@ -460,7 +428,6 @@
                         ${itemsHtml}
                     </div>
                 </div>
-                <div class="debug-box">${debugInfo}</div>
             `;
         } else {
             pararRepeticaoAlerta();
@@ -471,16 +438,15 @@
                     <span class="material-icons-round" style="vertical-align: middle; margin-right: 4px;">check_circle</span>
                     Rua atual: <b>${nomeRuaGPS}</b>.<br>Nenhum registro encontrado.
                 </div>
-                <div class="debug-box">${debugInfo}</div>
             `;
         }
     }
 
-    function iniciarRepeticaoAlerta(nomeRua) {
+    function iniciarRepeticaoAlerta() {
         pararRepeticaoAlerta();
         timerRepeticaoAlerta = setInterval(() => {
             if (emRuaProibidaAtualmente) {
-                dispararAlertasCompletos(nomeRua);
+                dispararAlertasCompletos();
             } else {
                 pararRepeticaoAlerta();
             }
