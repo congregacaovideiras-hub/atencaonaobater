@@ -177,18 +177,18 @@
             border: 1px solid var(--border);
         }
 
-        .gps-alert-box {
-            background-color: #fef3c7;
-            border: 1px solid #fde047;
-            color: #92400e;
+        .debug-box {
+            background: #1e293b;
+            color: #38bdf8;
             padding: 12px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 12px;
+            text-align: left;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
         }
 
         @keyframes fadeIn {
@@ -218,7 +218,7 @@
     <!-- Indicador de Localização Atual -->
     <div id="infoGPS" class="location-badge" style="display: none;">
         <span class="material-icons-round" style="font-size: 18px; color: var(--primary);">near_me</span>
-        <div>GPS Atual: <strong id="ruaGPS">Aguardando coordenadas...</strong> (Precisão: <span id="precisaoGPS">--</span>m)</div>
+        <div>GPS Atual: <strong id="ruaGPS">Aguardando coordenadas...</strong></div>
     </div>
 
     <!-- Container de Status/Resultados -->
@@ -230,7 +230,6 @@
 </div>
 
 <script>
-    // VARIÁVEIS GLOBAIS DE ESTADO
     let baseDadosLocal = [];
     let watchId = null;
     let ultimaLat = 0;
@@ -238,18 +237,20 @@
     let timerRepeticaoAlerta = null;
     let emRuaProibidaAtualmente = false;
 
-    // Normalização rigorosa de texto (remove acentos, pontuações e padroniza maiúsculas)
+    // Normalização ultra limpa para garantir cruzamento de texto perfeito
     function normalizarTexto(texto) {
         if (!texto) return "";
         return texto
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
-            .replace(/^(RUA|AVENIDA|AV|ALAMEDA|TRAVESSA|ESTRADA|PCA|PRAÇA)\.?\s*/i, "")
+            .replace(/^(RUA|AVENIDA|AV|ALAMEDA|TRAVESSA|ESTRADA|PCA|PRAÇA|RODOVIA|ROD)\.?\s*/i, "")
+            .replace(/[^a-zA-Z0-9\s]/g, "")
             .replace(/\s+/g, " ")
             .trim()
             .toUpperCase();
     }
 
+    // CARREGA E EXibe O DIAGNÓSTICO DO CACHE DIRETAMENTE NA TELA
     function carregarBancoDeDados() {
         const statusElem = document.getElementById('statusInicial');
         try {
@@ -258,7 +259,7 @@
             if (dadosCache) {
                 const dadosBrutos = JSON.parse(dadosCache);
                 baseDadosLocal = dadosBrutos.map(item => {
-                    const original = item.textoCompleto || "";
+                    const original = item.textoCompleto || item.textoExibicao || "";
                     return {
                         textoCompleto: original,
                         textoExibicao: item.textoExibicao || original,
@@ -266,35 +267,35 @@
                     };
                 });
 
+                // Mostra os primeiros itens salvos para você conferir se o cache veio certo
+                let amostra = baseDadosLocal.slice(0, 3).map(i => i.textoNormalizado).join(" | ");
+
                 if (statusElem) {
-                    statusElem.innerHTML = `Banco de dados local pronto (<b>${baseDadosLocal.length}</b> registros). Inicie o GPS para começar.`;
+                    statusElem.innerHTML = `
+                        Cache carregado com sucesso! (<b>${baseDadosLocal.length}</b> registros).<br>
+                        <span style="font-size:11px; color:#16a34a;">Exemplos no cache: ${amostra}...</span>
+                    `;
                 }
             } else {
                 if (statusElem) {
-                    statusElem.innerHTML = `<span style="color:var(--danger);">Nenhum cache encontrado localmente. Execute a tela de carregamento primeiro.</span>`;
+                    statusElem.innerHTML = `<span style="color:var(--danger);">ATENÇÃO: Nenhum cache encontrado no localStorage ("naoBater_cache"). Volte na tela de carregamento de dados primeiro!</span>`;
                 }
             }
         } catch (error) {
             console.error("Erro ao carregar cache local:", error);
             if (statusElem) {
-                statusElem.innerHTML = `<span style="color:var(--danger);">Erro ao carregar dados do cache local.</span>`;
+                statusElem.innerHTML = `<span style="color:var(--danger);">Erro crítico ao ler o cache local.</span>`;
             }
         }
     }
 
     carregarBancoDeDados();
 
-    // Sistema de Áudio / Fala e Vibração Contínua
     function dispararAlertasCompletos(nomeRuaDetectada) {
-        // Vibração por 5 segundos (padrão contínuo/pulsado)
         if (navigator.vibrate) {
             navigator.vibrate([1000, 200, 1000, 200, 1000, 200, 1000]);
         }
-
-        // Aviso sonoro contínuo por 5 segundos (Beep)
         tocarAlertaSonoro5Segundos();
-
-        // Síntese de voz oficial (falar o nome da rua)
         falarTextoVoz(`Atenção. Você entrou na rua ${nomeRuaDetectada}. Existe um registro de Não Bater.`);
     }
 
@@ -328,7 +329,7 @@
 
     function falarTextoVoz(mensagem) {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Para falas anteriores para evitar acúmulo
+            window.speechSynthesis.cancel();
             const fala = new SpeechSynthesisUtterance(mensagem);
             fala.lang = 'pt-BR';
             fala.rate = 1.0;
@@ -336,7 +337,6 @@
         }
     }
 
-    // Controle do Monitoramento GPS Otimizado
     window.alternarMonitoramentoGPS = function() {
         const btnGPS = document.getElementById('btnGPS');
         const infoGPS = document.getElementById('infoGPS');
@@ -361,26 +361,15 @@
         btnGPS.classList.add('active');
         btnGPS.innerHTML = `<span class="material-icons-round">stop</span> Parar GPS`;
         infoGPS.style.display = 'flex';
-        document.getElementById('ruaGPS').innerText = 'Buscando sinal de alta precisão...';
+        document.getElementById('ruaGPS').innerText = 'Obtendo sinal do GPS...';
 
-        // Configuração com alta precisão e alta frequência (a cada 2 segundos via highAccuracy)
         watchId = navigator.geolocation.watchPosition(
             async function(pos) {
                 const lat = pos.coords.latitude;
                 const lon = pos.coords.longitude;
-                const precisao = pos.coords.accuracy;
 
-                document.getElementById('precisaoGPS').innerText = Math.round(precisao);
-
-                // REQUISITO: Ignorar leituras com precisão maior que 20 metros
-                if (precisao > 20) {
-                    document.getElementById('ruaGPS').innerText = "Sinal fraco (aguardando precisão < 20m)...";
-                    return;
-                }
-
-                // REQUISITO: Consultar novamente apenas se andar mais de 5 metros
                 const distanciaPercorrida = calcularDistanciaMetros(lat, lon, ultimaLat, ultimaLon);
-                if (distanciaPercorrida < 5 && ultimaLat !== 0) {
+                if (distanciaPercorrida < 3 && ultimaLat !== 0) {
                     return;
                 }
 
@@ -388,26 +377,27 @@
                 ultimaLon = lon;
 
                 try {
-                    document.getElementById('ruaGPS').innerText = 'Identificando rua atual...';
+                    document.getElementById('ruaGPS').innerText = 'Buscando nome da rua...';
 
-                    // Consulta otimizada no Nominatim com limite de cache nativo e timeout curto
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`, {
-                        cache: 'force-cache'
+                        cache: 'no-store'
                     });
                     const data = await response.json();
 
-                    let nomeRua = data.address.road || data.address.pedestrian || data.address.suburb || "";
+                    let nomeRua = "";
+                    if (data && data.address) {
+                        nomeRua = data.address.road || data.address.pedestrian || data.address.suburb || data.address.neighbourhood || "";
+                    }
 
                     if (!nomeRua) {
-                        document.getElementById('ruaGPS').innerText = "Rua não identificada pelo GPS.";
-                        pararRepeticaoAlerta();
+                        document.getElementById('ruaGPS').innerText = "Rua não identificada neste ponto.";
                         return;
                     }
 
                     document.getElementById('ruaGPS').innerText = nomeRua;
-
-                    // Validação contra o banco local
-                    pesquisarNaMemoriaFlexivel(nomeRua);
+                    
+                    // Executa a busca cruzada com o cache e gera painel de diagnóstico detalhado
+                    pesquisarNaMemoriaComDebug(nomeRua);
 
                 } catch (err) {
                     console.error("Erro na Geocodificação:", err);
@@ -416,42 +406,40 @@
             },
             function(err) {
                 console.error("Erro no GPS:", err);
-                document.getElementById('ruaGPS').innerText = "Erro de permissão ou sinal GPS.";
+                document.getElementById('ruaGPS').innerText = "Erro de sinal GPS.";
             },
             {
                 enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 1000 // Atualiza a cada segundo se necessário
+                timeout: 15000,
+                maximumAge: 0
             }
         );
     };
 
-    // Pesquisa flexível utilizando palavras semelhantes e sem se preocupar com número de casa
-    function pesquisarNaMemoriaFlexivel(termoBusca) {
+    // MOTOR DE BUSCA COM DIAGNÓSTICO VISUAL NA TELA
+    function pesquisarNaMemoriaComDebug(nomeRuaGPS) {
         const container = document.getElementById('resultados');
-        const termoLimpo = normalizarTexto(termoBusca);
+        const termoGPSLimpo = normalizarTexto(nomeRuaGPS);
 
         if (baseDadosLocal.length === 0) {
-            container.innerHTML = `<div class="status-box">Base de dados local vazia. Verifique o cache.</div>`;
+            container.innerHTML = `<div class="status-box" style="color:var(--danger);">O cache está vazio! Impossível comparar.</div>`;
             return;
         }
 
-        // Compara ignorando números e focando nas palavras semelhantes do nome da rua
+        // Tenta encontrar correspondência flexível nas duas direções
         let encontrados = baseDadosLocal.filter(item => {
-            const ruaCadastradaLimpa = item.textoNormalizado.split(/,\s*(N[ºO°]|NUMERO|APTO|CASA)/i)[0].trim();
-            
-            // Verifica correspondência parcial por palavras semelhantes (incluindo subpartes)
-            return ruaCadastradaLimpa.includes(termoLimpo) || termoLimpo.includes(ruaCadastradaLimpa);
+            const itemLimpo = item.textoNormalizado;
+            return itemLimpo.includes(termoGPSLimpo) || termoGPSLimpo.includes(itemLimpo);
         });
 
+        // Monta texto de debug para mostrar exatamente o que o app tentou cruzar
+        let debugInfo = `Rua GPS tratada: "${termoGPSLimpo}"\nTotal no cache: ${baseDadosLocal.length}\nEncontrados: ${encontrados.length}`;
+
         if (encontrados.length > 0) {
-            // Se entrou em rua proibida pela primeira vez ou mudou de rua proibida
             if (!emRuaProibidaAtualmente) {
                 emRuaProibidaAtualmente = true;
-                dispararAlertasCompletos(termoBusca);
-
-                // REQUISITO: Repetir o aviso sonoro enquanto permanecer na rua (a cada 6 segundos)
-                iniciarRepeticaoAlerta(termoBusca);
+                dispararAlertasCompletos(nomeRuaGPS);
+                iniciarRepeticaoAlerta(nomeRuaGPS);
             }
 
             let itemsHtml = encontrados.map(item => `<div class="address-item">${item.textoExibicao}</div>`).join('');
@@ -459,7 +447,7 @@
             container.innerHTML = `
                 <div class="gps-alert-box">
                     <span class="material-icons-round">warning</span>
-                    ATENÇÃO: Você está em uma rua com restrição registrada!
+                    ATENÇÃO: Você entrou em uma rua com restrição registrada!
                 </div>
                 <div class="card-alert">
                     <div class="alert-header">
@@ -470,17 +458,18 @@
                         ${itemsHtml}
                     </div>
                 </div>
+                <div class="debug-box">DEBUG: ${debugInfo}</div>
             `;
         } else {
-            // Saiu da rua proibida
             pararRepeticaoAlerta();
             emRuaProibidaAtualmente = false;
 
             container.innerHTML = `
                 <div class="status-box" style="background-color: var(--success-bg); color: var(--success); border-color: #bbf7d0;">
                     <span class="material-icons-round" style="vertical-align: middle; margin-right: 4px;">check_circle</span>
-                    Nenhum registro de "Não Bater" para <b>${termoBusca}</b>. Liberado.
+                    Rua atual: <b>${nomeRuaGPS}</b>.<br>Nenhum registro encontrado no cache.
                 </div>
+                <div class="debug-box">DEBUG (O que o app leu vs Cache):\n- GPS Lido: "${termoGPSLimpo}"\n- Verifique se a grafia no seu banco bate com este termo.</div>
             `;
         }
     }
@@ -493,10 +482,11 @@
             } else {
                 pararRepeticaoAlerta();
             }
-        }, 7000); // Repete o ciclo completo de alerta a cada 7 segundos enquanto estiver na mesma rua restrita
+        }, 7000);
     }
 
     function pararRepeticaoAlerta() {
+        if5 = null;
         if (timerRepeticaoAlerta) {
             clearInterval(timerRepeticaoAlerta);
             timerRepeticaoAlerta = null;
