@@ -69,37 +69,6 @@
             margin-top: 4px;
         }
 
-        .search-box {
-            position: relative;
-            margin-bottom: 12px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 14px 14px 14px 44px;
-            font-size: 15px;
-            font-weight: 600;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            outline: none;
-            text-transform: uppercase;
-            transition: all 0.2s ease;
-        }
-
-        .search-box input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
-        }
-
-        .search-box .icon {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            display: flex;
-        }
-
         .button-group {
             display: flex;
             gap: 10px;
@@ -108,10 +77,10 @@
 
         .btn {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             border: none;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             display: flex;
@@ -119,15 +88,6 @@
             justify-content: center;
             gap: 6px;
             transition: background-color 0.2s;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
         }
 
         .btn-gps {
@@ -248,17 +208,8 @@
         <p>Monitoramento contínuo de ruas com restrição.</p>
     </div>
 
-    <!-- Campo de Busca -->
-    <div class="search-box">
-        <span class="material-icons-round icon">search</span>
-        <input type="text" id="inputBusca" placeholder="DIGITE O NOME DA RUA..." onkeypress="verificarEnter(event)">
-    </div>
-
-    <!-- Botoes de Ação -->
+    <!-- Botão de Ação GPS -->
     <div class="button-group">
-        <button class="btn btn-primary" onclick="executarBuscaManual()">
-            <span class="material-icons-round">search</span> Buscar
-        </button>
         <button id="btnGPS" class="btn btn-gps" onclick="alternarMonitoramentoGPS()">
             <span class="material-icons-round">my_location</span> Iniciar GPS
         </button>
@@ -295,7 +246,7 @@
             if (dadosCache) {
                 baseDadosLocal = JSON.parse(dadosCache);
                 if (statusElem) {
-                    statusElem.innerHTML = `Banco de dados local pronto (<b>${baseDadosLocal.length}</b> registros). Digite uma rua ou inicie o GPS.`;
+                    statusElem.innerHTML = `Banco de dados local pronto (<b>${baseDadosLocal.length}</b> registros). Inicie o GPS para começar.`;
                 }
             } else {
                 if (statusElem) {
@@ -312,20 +263,6 @@
 
     // Inicializa a carga dos dados assim que o script carrega
     carregarBancoDeDados();
-
-    // TECLA ENTER
-    window.verificarEnter = function(event) {
-        if (event.key === "Enter") {
-            executarBuscaManual();
-        }
-    };
-
-    // 1. BUSCA MANUAL (Usa o cache em memória)
-    window.executarBuscaManual = function() {
-        const termo = document.getElementById('inputBusca').value.trim().toUpperCase();
-        if (termo === '') return;
-        pesquisarNaMemoria(termo, false);
-    };
 
     // 2. MONITORAMENTO CONTÍNUO COM WATCHPOSITION
     window.alternarMonitoramentoGPS = function() {
@@ -388,7 +325,6 @@
                     if (nomeRua.toUpperCase() !== ultimaRuaDetectada.toUpperCase()) {
                         ultimaRuaDetectada = nomeRua;
                         ruaGPSElem.innerText = nomeRua;
-                        document.getElementById('inputBusca').value = nomeRua;
 
                         // Pesquisa no cache local
                         pesquisarNaMemoria(nomeRua, true);
