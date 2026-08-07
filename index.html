@@ -237,7 +237,7 @@
     let timerRepeticaoAlerta = null;
     let emRuaProibidaAtualmente = false;
 
-    // Normalização ultra limpa para garantir cruzamento de texto perfeito
+    // Normalização aprimorada: remove prefixos mas preserva o nome essencial (como ANGELO LOTIERZO)
     function normalizarTexto(texto) {
         if (!texto) return "";
         return texto
@@ -250,7 +250,6 @@
             .toUpperCase();
     }
 
-    // CARREGA E EXibe O DIAGNÓSTICO DO CACHE DIRETAMENTE NA TELA
     function carregarBancoDeDados() {
         const statusElem = document.getElementById('statusInicial');
         try {
@@ -259,21 +258,21 @@
             if (dadosCache) {
                 const dadosBrutos = JSON.parse(dadosCache);
                 baseDadosLocal = dadosBrutos.map(item => {
-                    const original = item.textoCompleto || item.textoExibicao || "";
+                    // Compatibilidade com a estrutura ENDERECO ou textoCompleto
+                    const original = item.ENDERECO || item.textoCompleto || item.textoExibicao || "";
                     return {
                         textoCompleto: original,
-                        textoExibicao: item.textoExibicao || original,
+                        textoExibicao: original,
                         textoNormalizado: normalizarTexto(original)
                     };
                 });
 
-                // Mostra os primeiros itens salvos para você conferir se o cache veio certo
                 let amostra = baseDadosLocal.slice(0, 3).map(i => i.textoNormalizado).join(" | ");
 
                 if (statusElem) {
                     statusElem.innerHTML = `
                         Cache carregado com sucesso! (<b>${baseDadosLocal.length}</b> registros).<br>
-                        <span style="font-size:11px; color:#16a34a;">Exemplos no cache: ${amostra}...</span>
+                        <span style="font-size:11px; color:#16a34a;">Exemplos salvos: ${amostra}...</span>
                     `;
                 }
             } else {
@@ -396,8 +395,7 @@
 
                     document.getElementById('ruaGPS').innerText = nomeRua;
                     
-                    // Executa a busca cruzada com o cache e gera painel de diagnóstico detalhado
-                    pesquisarNaMemoriaComDebug(nomeRua);
+                    pesquisarNaMemoriaFlexivel(nomeRua);
 
                 } catch (err) {
                     console.error("Erro na Geocodificação:", err);
@@ -416,8 +414,8 @@
         );
     };
 
-    // MOTOR DE BUSCA COM DIAGNÓSTICO VISUAL NA TELA
-    function pesquisarNaMemoriaComDebug(nomeRuaGPS) {
+    // MOTOR DE CORRESPONDÊNCIA FLEXÍVEL CORRIGIDO (CONECTA PALAVRAS PARCIAIS)
+    function pesquisarNaMemoriaFlexivel(nomeRuaGPS) {
         const container = document.getElementById('resultados');
         const termoGPSLimpo = normalizarTexto(nomeRuaGPS);
 
@@ -426,13 +424,16 @@
             return;
         }
 
-        // Tenta encontrar correspondência flexível nas duas direções
+        // Correção de lógica: Verifica se o miolo principal da rua (ex: ANGELO LOTIERZO) está contido no banco ou vice-versa
         let encontrados = baseDadosLocal.filter(item => {
             const itemLimpo = item.textoNormalizado;
-            return itemLimpo.includes(termoGPSLimpo) || termoGPSLimpo.includes(itemLimpo);
+            if (!itemLimpo) return false;
+
+            // Compara correspondência exata ou cruzada por partes (ex: se "ANGELO LOTIERZO" está dentro do banco)
+            return itemLimpo.includes(termoGPSLimpo) || termoGPSLimpo.includes(itemLimpo) ||
+                   verificarPalavrasParciais(termoGPSLimpo, itemLimpo);
         });
 
-        // Monta texto de debug para mostrar exatamente o que o app tentou cruzar
         let debugInfo = `Rua GPS tratada: "${termoGPSLimpo}"\nTotal no cache: ${baseDadosLocal.length}\nEncontrados: ${encontrados.length}`;
 
         if (encontrados.length > 0) {
@@ -447,7 +448,7 @@
             container.innerHTML = `
                 <div class="gps-alert-box">
                     <span class="material-icons-round">warning</span>
-                    ATENÇÃO: Você entrou em uma rua com restrição registrada!
+                    ATENÇÃO: Você está em uma rua com restrição registrada!
                 </div>
                 <div class="card-alert">
                     <div class="alert-header">
@@ -474,6 +475,20 @@
         }
     }
 
+    // Função auxiliar para cruzar palavras-chave (Ex: "ANGELO" e "LOTIERZO")
+    function verificarPalavrasParciais(termo1, termo2) {
+        const palavras1 = termo1.split(' ').filter(p => p.length > 2);
+        const palavras2 = termo2.split(' ').filter(p => p.length > 2);
+        
+        let coincidente = 0;
+        for (let p of palavras1) {
+            if (palavras2.some(p2 => p2.includes(p) || p.includes(p2))) {
+                coincidente++;
+            }
+        }
+        return coincidente >= 2 || (palavras1.length === 1 && coincidente === 1);
+    }
+
     function iniciarRepeticaoAlerta(nomeRua) {
         pararRepeticaoAlerta();
         timerRepeticaoAlerta = setInterval(() => {
@@ -486,7 +501,6 @@
     }
 
     function pararRepeticaoAlerta() {
-        if5 = null;
         if (timerRepeticaoAlerta) {
             clearInterval(timerRepeticaoAlerta);
             timerRepeticaoAlerta = null;
