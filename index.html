@@ -3,84 +3,489 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Ruas - Não Bater</title>
+    
+    <!-- Google Fonts & Ícones Material -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-        body { margin: 0; padding: 10px; background: transparent; }
-        .card-solicitar {
-            width: 100%;
-            max-width: 380px;
-            border-radius: 20px;
-            padding: 14px 16px;
-            color: #ffffff;
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --success: #16a34a;
+            --success-bg: #f0fdf4;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            padding: 16px;
             display: flex;
-            align-items: center;
-            gap: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            text-decoration: none;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            cursor: pointer;
-            border: none;
+            justify-content: center;
         }
 
-        .card-solicitar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
         }
 
-        .badge-icone {
-            background-color: #ffffff;
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            gap: 8px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 14px 14px 44px;
+            font-size: 15px;
+            font-weight: 600;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+        }
+
+        .search-box .icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            display: flex;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-gps {
+            background-color: #0d9488;
+            color: white;
+        }
+
+        .btn-gps.active {
+            background-color: var(--danger);
+        }
+
+        .location-badge {
+            background: #f8fafc;
+            border: 1px dashed var(--border);
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .location-badge strong {
+            color: var(--text-main);
+        }
+
+        /* Cards de Alerta */
+        .card-alert {
+            background-color: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            border-left: 6px solid var(--danger);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--danger);
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .address-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .address-item {
+            background: white;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            border: 1px solid #fee2e2;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+
+        .address-item::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background-color: var(--danger);
+            border-radius: 50%;
             flex-shrink: 0;
         }
 
-        .badge-icone svg { width: 24px; height: 24px; }
-        .titulo-acao { font-size: 17px; font-weight: 500; text-transform: uppercase; }
+        .status-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            color: var(--text-muted);
+            background: #f8fafc;
+            border: 1px solid var(--border);
+        }
+
+        .gps-alert-box {
+            background-color: #fef3c7;
+            border: 1px solid #fde047;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
 
-    <button id="btnGPS" class="card-solicitar">
-        <div class="badge-icone">
-            <svg id="iconeRelatorio" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-            </svg>
+<div class="container">
+    <div class="header">
+        <h2>
+            <span class="material-icons-round" style="color: var(--danger);">report_problem</span>
+            Alerta: Não Bater
+        </h2>
+        <p>Monitoramento contínuo de ruas com restrição.</p>
+    </div>
+
+    <!-- Campo de Busca -->
+    <div class="search-box">
+        <span class="material-icons-round icon">search</span>
+        <input type="text" id="inputBusca" placeholder="DIGITE O NOME DA RUA..." onkeypress="verificarEnter(event)">
+    </div>
+
+    <!-- Botoes de Ação -->
+    <div class="button-group">
+        <button class="btn btn-primary" onclick="executarBuscaManual()">
+            <span class="material-icons-round">search</span> Buscar
+        </button>
+        <button id="btnGPS" class="btn btn-gps" onclick="alternarMonitoramentoGPS()">
+            <span class="material-icons-round">my_location</span> Iniciar GPS
+        </button>
+    </div>
+
+    <!-- Indicador de Localização Atual -->
+    <div id="infoGPS" class="location-badge" style="display: none;">
+        <span class="material-icons-round" style="font-size: 18px; color: var(--primary);">near_me</span>
+        <div>GPS Atual: <strong id="ruaGPS">Aguardando coordenadas...</strong></div>
+    </div>
+
+    <!-- Container de Status/Resultados -->
+    <div id="resultados">
+        <div class="status-box" id="statusInicial">
+            Carregando banco de dados local...
         </div>
-        <span class="titulo-acao">INICIAR MONITOR GPS</span>
-    </button>
+    </div>
+</div>
 
-    <script>
-        const DADOS_NAO_BATER = [
-            "Rua das Palmeiras",
-            "Avenida Brasil",
-            "Rua Sete de Setembro",
-            "Travessa Jundiaí"
-        ];
+<script>
+    // VARIÁVEIS GLOBAIS DE ESTADO
+    let baseDadosLocal = [];
+    let watchId = null;
+    let ultimaRuaDetectada = "";
+    let ultimaLat = 0;
+    let ultimaLon = 0;
 
-        const URL_DESTINO = "https://congregacaovideiras-hub.github.io/naobater/";
-        const COR_DE_FUNDO = "#1e3a8a";
-
-        const btn = document.getElementById('btnGPS');
-        const icone = document.getElementById('iconeRelatorio');
-
-        btn.style.backgroundColor = COR_DE_FUNDO;
-        icone.style.fill = COR_DE_FUNDO;
-
-        btn.addEventListener('click', function() {
-            const dadosFormatados = DADOS_NAO_BATER.map(nome => ({
-                textoCompleto: nome.toUpperCase(),
-                textoExibicao: nome
-            }));
-
-            localStorage.setItem('naoBater_cache', JSON.stringify(dadosFormatados));
+    // CARREGA A COLEÇÃO DIRETAMENTE DO CACHE LOCAL (LOCALSTORAGE)
+    function carregarBancoDeDados() {
+        const statusElem = document.getElementById('statusInicial');
+        try {
+            const dadosCache = localStorage.getItem('naoBater_cache');
             
-            window.open(URL_DESTINO, '_blank');
-        });
-    </script>
+            if (dadosCache) {
+                baseDadosLocal = JSON.parse(dadosCache);
+                if (statusElem) {
+                    statusElem.innerHTML = `Banco de dados local pronto (<b>${baseDadosLocal.length}</b> registros). Digite uma rua ou inicie o GPS.`;
+                }
+            } else {
+                if (statusElem) {
+                    statusElem.innerHTML = `<span style="color:var(--danger);">Nenhum cache encontrado localmente. Execute a tela de carregamento primeiro.</span>`;
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao carregar cache local:", error);
+            if (statusElem) {
+                statusElem.innerHTML = `<span style="color:var(--danger);">Erro ao carregar dados do cache local.</span>`;
+            }
+        }
+    }
+
+    // Inicializa a carga dos dados assim que o script carrega
+    carregarBancoDeDados();
+
+    // TECLA ENTER
+    window.verificarEnter = function(event) {
+        if (event.key === "Enter") {
+            executarBuscaManual();
+        }
+    };
+
+    // 1. BUSCA MANUAL (Usa o cache em memória)
+    window.executarBuscaManual = function() {
+        const termo = document.getElementById('inputBusca').value.trim().toUpperCase();
+        if (termo === '') return;
+        pesquisarNaMemoria(termo, false);
+    };
+
+    // 2. MONITORAMENTO CONTÍNUO COM WATCHPOSITION
+    window.alternarMonitoramentoGPS = function() {
+        const btnGPS = document.getElementById('btnGPS');
+        const infoGPS = document.getElementById('infoGPS');
+        const ruaGPSElem = document.getElementById('ruaGPS');
+        const container = document.getElementById('resultados');
+
+        // Se já estiver rodando, para o monitoramento
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            btnGPS.classList.remove('active');
+            btnGPS.innerHTML = `<span class="material-icons-round">my_location</span> Iniciar GPS`;
+            infoGPS.style.display = 'none';
+            container.innerHTML = `<div class="status-box">Monitoramento GPS interrompido.</div>`;
+            ultimaRuaDetectada = "";
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            container.innerHTML = `<div class="status-box" style="color:var(--danger);">GPS não suportado neste navegador.</div>`;
+            return;
+        }
+
+        // Inicia o monitoramento contínuo
+        btnGPS.classList.add('active');
+        btnGPS.innerHTML = `<span class="material-icons-round">stop</span> Parar GPS`;
+        infoGPS.style.display = 'flex';
+        ruaGPSElem.innerText = 'Buscando sinal do GPS...';
+
+        watchId = navigator.geolocation.watchPosition(
+            async function(pos) {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+
+                // Evita chamadas repetidas de geocodificação se a pessoa estiver parada (deslocamento menor que ~15 metros)
+                if (calcularDistanciaMetros(lat, lon, ultimaLat, ultimaLon) < 15 && ultimaRuaDetectada !== "") {
+                    return;
+                }
+
+                ultimaLat = lat;
+                ultimaLon = lon;
+
+                try {
+                    ruaGPSElem.innerText = 'Identificando rua...';
+
+                    // Geocodificação Reversa para pegar o nome da rua
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=pt-BR`);
+                    const data = await response.json();
+
+                    let nomeRua = data.address.road || data.address.pedestrian || data.address.suburb || "";
+
+                    if (!nomeRua) {
+                        ruaGPSElem.innerText = "Rua não identificada.";
+                        return;
+                    }
+
+                    // Só realiza nova consulta se mudou de rua
+                    if (nomeRua.toUpperCase() !== ultimaRuaDetectada.toUpperCase()) {
+                        ultimaRuaDetectada = nomeRua;
+                        ruaGPSElem.innerText = nomeRua;
+                        document.getElementById('inputBusca').value = nomeRua;
+
+                        // Pesquisa no cache local
+                        pesquisarNaMemoria(nomeRua, true);
+                    }
+
+                } catch (err) {
+                    console.error("Erro na Geocodificação:", err);
+                    ruaGPSElem.innerText = "Erro ao buscar nome da rua.";
+                }
+            },
+            function(err) {
+                console.error("Erro no GPS:", err);
+                ruaGPSElem.innerText = "Erro de conexão/permissão GPS.";
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 3000
+            }
+        );
+    };
+
+    // 3. CONSULTA RÁPIDA APENAS NO CACHE LOCAL (Em memória)
+    function pesquisarNaMemoria(termoBusca, viaGPS = false) {
+        const container = document.getElementById('resultados');
+        const termoLimpo = termoBusca.toUpperCase().trim();
+
+        if (baseDadosLocal.length === 0) {
+            container.innerHTML = `<div class="status-box">Base de dados local vazia. Verifique o cache.</div>`;
+            return;
+        }
+
+        // Filtra instantaneamente a lista local
+        const encontrados = baseDadosLocal.filter(item => item.textoCompleto.includes(termoLimpo));
+
+        if (encontrados.length > 0) {
+            // Vibração
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 200, 500]);
+            }
+
+            // Som de Alerta (Certifique-se de ter o arquivo beep.mp3 na mesma pasta)
+            try {
+                const audio = new Audio("beep.mp3");
+                audio.play().catch(e => console.log("Aviso: Áudio precisa de interação prévia do usuário no navegador.", e));
+            } catch (e) {
+                console.error("Erro ao tocar áudio:", e);
+            }
+
+            let avisoGPSHtml = viaGPS ? `
+                <div class="gps-alert-box">
+                    <span class="material-icons-round">warning</span>
+                    ATENÇÃO: Você entrou em uma rua com restrição registrada!
+                </div>
+            ` : '';
+
+            let itemsHtml = encontrados.map(item => `<div class="address-item">${item.textoExibicao}</div>`).join('');
+
+            container.innerHTML = `
+                ${avisoGPSHtml}
+                <div class="card-alert">
+                    <div class="alert-header">
+                        <span class="material-icons-round">error</span>
+                        Atenção: Não Bater (${encontrados.length})
+                    </div>
+                    <div class="address-list">
+                        ${itemsHtml}
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="status-box" style="background-color: var(--success-bg); color: var(--success); border-color: #bbf7d0;">
+                    <span class="material-icons-round" style="vertical-align: middle; margin-right: 4px;">check_circle</span>
+                    Nenhum registro de "Não Bater" para <b>${termoLimpo}</b>.
+                </div>
+            `;
+        }
+    }
+
+    // Função utilitária para calcular a distância percorrida e não sobrecarregar com requisições HTTP desnecessárias
+    function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
+        if (!lat2 || !lon2) return 999;
+        const R = 6371e3;
+        const p1 = lat1 * Math.PI / 180;
+        const p2 = lat2 * Math.PI / 180;
+        const dp = (lat2 - lat1) * Math.PI / 180;
+        const dl = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(dp/2) * Math.sin(dp/2) +
+                  Math.cos(p1) * Math.cos(p2) *
+                  Math.sin(dl/2) * Math.sin(dl/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        return R * c;
+    }
+</script>
+
 </body>
 </html>
