@@ -285,7 +285,7 @@
             <span class="material-icons-round" style="color: var(--danger);">report_problem</span>
             Alerta: Não Bater
         </h2>
-        <p>Monitoramento contínuo de ruas com restrição a cada 30 metros.</p>
+        <p>Monitoramento contínuo de ruas com restrição a cada 15 metros.</p>
     </div>
 
     <div class="button-group">
@@ -494,7 +494,7 @@
                 const lon = pos.coords.longitude;
 
                 const distanciaPercorrida = calcularDistanciaMetros(lat, lon, ultimaLat, ultimaLon);
-                if (distanciaPercorrida < 30 && ultimaLat !== 0) {
+                if (distanciaPercorrida < 15 && ultimaLat !== 0) {
                     return;
                 }
 
