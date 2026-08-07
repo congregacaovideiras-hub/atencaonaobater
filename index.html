@@ -254,7 +254,7 @@
             if (dadosCache) {
                 const dadosBrutos = JSON.parse(dadosCache);
                 baseDadosLocal = dadosBrutos.map(item => {
-                    const original = item.ENDERECO || item.textoCompleto || item.textoExibicao || "";
+                    const original = typeof item === 'string' ? item : (item.ENDERECO || item.textoCompleto || item.textoExibicao || "");
                     return {
                         textoCompleto: original,
                         textoExibicao: original,
@@ -418,12 +418,10 @@
             return;
         }
 
-        // MOTOR DE BUSCA CORRIGIDO E BLINDADO: Compara com normalização em ambos os lados
         let encontrados = baseDadosLocal.filter(item => {
             const itemLimpo = item.textoNormalizado;
             if (!itemLimpo) return false;
 
-            // Compara exato e também verifica se um contém o outro em qualquer direção
             return itemLimpo === termoGPSLimpo || 
                    itemLimpo.includes(termoGPSLimpo) || 
                    termoGPSLimpo.includes(itemLimpo);
