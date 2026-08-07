@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor de Ruas - Não Bater</title>
     
-    <!-- Google Fonts & Ícones Material -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
@@ -220,12 +219,27 @@
 
     <div id="resultados">
         <div class="status-box" id="statusInicial">
-            Carregando banco de dados local...
+            Conectando ao Firebase...
         </div>
     </div>
 </div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCceXCFz8Vopi-Hzr6mWORGX39lSzyl_rg",
+        authDomain: "cache-3c4cc.firebaseapp.com",
+        projectId: "cache-3c4cc",
+        storageBucket: "cache-3c4cc.firebasestorage.app",
+        messagingSenderId: "385957817347",
+        appId: "1:385957817347:web:a3ef859c2bbd8f2ae63236"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
     let baseDadosLocal = [];
     let watchId = null;
     let ultimaLat = 0;
@@ -233,7 +247,6 @@
     let timerRepeticaoAlerta = null;
     let emRuaProibidaAtualmente = false;
 
-    // Normalização aprimorada: Remove acentos, prefixos e padroniza espaços
     function normalizarTexto(texto) {
         if (!texto) return "";
         return texto
@@ -246,50 +259,43 @@
             .toUpperCase();
     }
 
-    function carregarBancoDeDados() {
+    async function carregarBancoDoFirebase() {
         const statusElem = document.getElementById('statusInicial');
         try {
-            const dadosCache = localStorage.getItem('naoBater_cache');
-            
-            if (dadosCache) {
-                const dadosBrutos = JSON.parse(dadosCache);
-                
-                let listaReal = dadosBrutos;
-                if (!Array.isArray(dadosBrutos)) {
-                    listaReal = dadosBrutos.dados || dadosBrutos.itens || dadosBrutos.array || Object.values(dadosBrutos).find(Array.isArray) || [];
-                }
+            const querySnapshot = await getDocs(collection(db, "ruas"));
+            const ruasSet = new Set();
 
-                baseDadosLocal = listaReal.map(item => {
-                    const original = typeof item === 'string' ? item : (item.ENDERECO || item.textoCompleto || item.textoExibicao || item.rua || item.nome || "");
-                    return {
-                        textoCompleto: original,
-                        textoExibicao: original,
-                        textoNormalizado: normalizarTexto(original)
-                    };
-                }).filter(i => i.textoCompleto !== "");
-
-                let amostra = baseDadosLocal.slice(0, 2).map(i => `"${i.textoNormalizado}"`).join(" | ");
-
-                if (statusElem) {
-                    statusElem.innerHTML = `
-                        Cache carregado! (<b>${baseDadosLocal.length}</b> itens reais).<br>
-                        <span style="font-size:11px; color:#16a34a;">Exemplo: ${amostra}</span>
-                    `;
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const endereco = (data["ruas"] || data["ENDERECO"] || data["ENDEREÇO"] || Object.values(data)[0] || "").trim();
+                if (endereco) {
+                    ruasSet.add(endereco);
                 }
-            } else {
-                if (statusElem) {
-                    statusElem.innerHTML = `<span style="color:var(--danger);">ATENÇÃO: Nenhum cache encontrado no localStorage ("naoBater_cache").</span>`;
-                }
+            });
+
+            baseDadosLocal = Array.from(ruasSet).map(original => ({
+                textoCompleto: original,
+                textoExibicao: original,
+                textoNormalizado: normalizarTexto(original)
+            }));
+
+            let amostra = baseDadosLocal.slice(0, 2).map(i => `"${i.textoNormalizado}"`).join(" | ");
+
+            if (statusElem) {
+                statusElem.innerHTML = `
+                    Banco carregado do Firebase! (<b>${baseDadosLocal.length}</b> itens).<br>
+                    <span style="font-size:11px; color:#16a34a;">Exemplo: ${amostra}</span>
+                `;
             }
         } catch (error) {
-            console.error("Erro ao carregar cache local:", error);
+            console.error("Erro ao carregar do Firebase:", error);
             if (statusElem) {
-                statusElem.innerHTML = `<span style="color:var(--danger);">Erro crítico ao ler o cache local.</span>`;
+                statusElem.innerHTML = `<span style="color:var(--danger);">Erro ao carregar dados do Firebase. Verifique as Regras do Firestore.</span>`;
             }
         }
     }
 
-    carregarBancoDeDados();
+    carregarBancoDoFirebase();
 
     function dispararAlertasCompletos(nomeRuaDetectada) {
         if (navigator.vibrate) {
@@ -420,7 +426,7 @@
         const termoGPSLimpo = normalizarTexto(nomeRuaGPS);
 
         if (baseDadosLocal.length === 0) {
-            container.innerHTML = `<div class="status-box" style="color:var(--danger);">O cache está vazio! Impossível comparar.</div>`;
+            container.innerHTML = `<div class="status-box" style="color:var(--danger);">O banco está vazio! Impossível comparar.</div>`;
             return;
         }
 
@@ -433,7 +439,7 @@
                    termoGPSLimpo.includes(itemLimpo);
         });
 
-        let debugInfo = `GPS Lido (Original): "${nomeRuaGPS}"\nGPS Lido (Normalizado): "${termoGPSLimpo}"\nTotal Cache: ${baseDadosLocal.length}\nAchados: ${encontrados.length}\n1º do Cache (Normalizado): "${baseDadosLocal[0]?.textoNormalizado || 'VAZIO'}"`;
+        let debugInfo = `GPS Lido (Original): "${nomeRuaGPS}"\nGPS Lido (Normalizado): "${termoGPSLimpo}"\nTotal Firebase: ${baseDadosLocal.length}\nAchados: ${encontrados.length}`;
 
         if (encontrados.length > 0) {
             if (!emRuaProibidaAtualmente) {
@@ -463,7 +469,7 @@
             container.innerHTML = `
                 <div class="status-box" style="background-color: var(--success-bg); color: var(--success); border-color: #bbf7d0;">
                     <span class="material-icons-round" style="vertical-align: middle; margin-right: 4px;">check_circle</span>
-                    Rua atual: <b>${nomeRuaGPS}</b>.<br>Nenhum registro encontrado no cache.
+                    Rua atual: <b>${nomeRuaGPS}</b>.<br>Nenhum registro encontrado.
                 </div>
                 <div class="debug-box">${debugInfo}</div>
             `;
